@@ -26,9 +26,21 @@ handle(Req, State) ->
             {ok, Req3} = cowboy_req:reply(200, Req2),
             {ok, Req3, State};
         _ ->
-            {ok, Bs} = dqe_idx:collections(),
-            dalmatiner_idx_handler:send(ContentType, Bs, Req1, State)
+            {ok, Cs} = dqe_idx:collections(),
+            Cs1 = name_collections(Cs),
+            dalmatiner_idx_handler:send(ContentType, Cs1, Req1, State)
     end.
 
 terminate(_Reason, _Req, _State) ->
     ok.
+
+name_collections(Cs) ->
+    [name_collection(C) || C <- Cs].
+
+name_collection(C) ->
+    [{key, C}, {label, get_label(C)}].
+
+
+%% @TODO: look up labels somewhere!
+get_label(C) ->
+    C.
