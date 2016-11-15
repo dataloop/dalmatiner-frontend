@@ -143,6 +143,8 @@ deconstruct_tag({tag, <<>>, K}) ->
 deconstruct_tag({tag, N, K}) ->
     [N, K].
 
+destructure_where({'=', T, <<>>}) ->
+    #{ op => 'present', args => [deconstruct_tag(T), <<>>] };
 destructure_where({'=', T, V}) ->
     #{ op => 'eq', args => [deconstruct_tag(T), V] };
 destructure_where({'!=', T, V}) ->

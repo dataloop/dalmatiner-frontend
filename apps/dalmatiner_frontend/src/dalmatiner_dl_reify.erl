@@ -139,6 +139,8 @@ reify_tag([N, K]) ->
 %% -spec reify_where(condition()) -> binary().
 reify_where(#{ op := Op, args := Args }) when is_binary(Op) ->
     reify_where(#{ op => binary_to_atom(Op, utf8), args => Args });
+reify_where(#{ op := 'present', args := [T, <<>>] }) ->
+    <<(reify_tag(T))/binary>>;
 reify_where(#{ op := 'eq', args := [T, V] }) ->
     <<(reify_tag(T))/binary, " = '", V/binary, "'">>;
 reify_where(#{ op := 'neq', args := [T, V] }) ->
