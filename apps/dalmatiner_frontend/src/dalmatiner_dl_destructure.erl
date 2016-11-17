@@ -45,7 +45,7 @@ destructure(Query) when is_binary(Query) ->
     case expand_query(Query) of
         {ok, ExpandedQ} ->
             lager:info("Expanded query: ~p~n", [ExpandedQ]),
-            R = destructure_(ExpandedQ),
+            R = destructure_select(ExpandedQ),
             {ok, R};
         {error, {badmatch, _}} ->
             badmatch;
@@ -64,78 +64,123 @@ expand_query(Q) ->
             {error, Reason}
     end.
 
-destructure_parts(Parts) when is_list(Parts) ->
-    [begin
-         D = destructure_(P),
-         #{ selector => extract_selector(D),
-            alias => extract_alias(D),
-            fn => extract_fn(D) }
-     end || P <- Parts].
+-spec destructure_select(map()) -> query().
+destructure_select({ select, SubSelects, [], T }) ->
+    Query0 = maps:merge(timeframe(T), #{ parts => [] }),
 
-%% -spec destructure_(map()) -> query().
-destructure_({ select, Q, [], T}) ->
-    Parts = destructure_parts(Q),
-    Query = timeframe(T),
-    Query#{ parts => Parts };
+    lists:foldl(fun (SubS, Acc = #{ parts := Parts }) ->
+                        P = destructure_part(SubS, #{} ),
+                        Acc#{ parts := [Parts] ++ [P] }
+                end, Query0, SubSelects).
 
-%% -spec destructure_(map()) -> selector().
-destructure_(#{ op := get, args := [B, M] }) ->
-    #{ bucket => B, metric => M };
-destructure_(#{ op := sget, args := [B, M] }) ->
-    #{ bucket => B, metric => M };
-destructure_(#{ op := lookup, args := [B, undefined] }) ->
-    #{ collection => B, metric => [<<"ALL">>] };
-destructure_(#{ op := lookup, args := [B, undefined, Where] }) ->
+-spec destructure_part(map(), part()) -> part().
+destructure_part(#{ op := get, args := [B, M] }, P) ->
+    Selector = #{ bucket => B, metric => M },
+    P#{ selector => Selector };
+
+destructure_part(#{ op := sget, args := [B, M] }, P) ->
+    Selector = #{ bucket => B, metric => M },
+    P#{ selector => Selector };
+
+destructure_part(#{ op := lookup, args := [B, undefined] }, P) ->
+    Selector = #{ collection => B, metric => [<<"ALL">>] },
+    P#{ selector => Selector };
+
+destructure_part(#{ op := lookup, args := [B, undefined, Where] }, P) ->
     Condition = destructure_where(Where),
-    #{ collection => B, metric => [<<"ALL">>], condition => Condition };
-destructure_(#{ op := lookup, args := [B, M] }) ->
-    #{ collection => B, metric => M };
-destructure_(#{ op := lookup, args := [B, M, Where] }) ->
-    Condition = destructure_where(Where),
-    #{ collection => B, metric => M, condition => Condition };
+    Selector = #{ collection => B, metric => [<<"ALL">>],
+                  condition => Condition },
+    P#{ selector => Selector };
 
-%% -spec destructure_(map()) -> fn().
-destructure_(#{ op := fcall,
-               args := #{name := Name, inputs := Args} }) ->
-    #{ name => Name, args => destructure_(Args) };
+destructure_part(#{ op := lookup, args := [B, M] }, P) ->
+    Selector = #{ collection => B, metric => M },
+    P#{ selector => Selector };
+
+destructure_part(#{ op := lookup, args := [B, M, Where] }, P) ->
+    Condition = destructure_where(Where),
+    Selector = #{ collection => B, metric => M, condition => Condition },
+    P#{ selector => Selector };
+
+%% Functions applied to selectors
+destructure_part(#{ op := fcall,
+                    args := #{ name := Name,
+                               inputs := [#{op := Op} = H | R] }}, P)
+  when Op =:= get; Op =:= sget; Op =:= lookup ->
+    P1 = destructure_part(H, P),
+    Args = destructure_arg(R),
+    Fn = #{ name => Name, args => [selector | Args] },
+    P1#{ fn => Fn };
+destructure_part(#{ op := fcall,
+                    args := #{ name := Name,
+                               inputs := [#{op := fcall} = H | R] }}, P) ->
+    P1 = #{ fn := InnerFn } = destructure_part(H, P),
+    Args = destructure_arg(R),
+    Fn = #{ name => Name, args => [InnerFn | Args] },
+    P1#{ fn => Fn };
+destructure_part(#{ op := fcall,
+                    args := #{ name := Name,
+                               inputs := [#{op := timeshift} = H | R] }}, P) ->
+    P1 = destructure_part(H, P),
+    Args = destructure_arg(R),
+    Fn = #{ name => Name, args => [timeshift | Args] },
+    P1#{ fn => Fn };
+
+destructure_part(#{ op := timeshift,
+                    args := [T, #{op := Op} = Q ] }, P)
+  when Op =:= get; Op =:= sget; Op =:= lookup ->
+    P1 = #{selector := S} = destructure_part(Q, P),
+    S1 = S#{ timeshift => destructure_arg(T) },
+    P1#{ selector := S1 };
 
 %% -spec destructure_(map()) -> alias().
-destructure_(#{op := named, args := [L, Q]}) when is_list(L) ->
+destructure_part(#{ op := named, args := [L, Q] }, P) when is_list(L) ->
     N = destructure_named(L),
-    Qs = destructure_(Q),
-    #{ label => N, subject => Qs };
+    P1 = destructure_part(Q, P),
+    Alias = #{ label => N },
+    P1#{ alias => Alias }.
 
-destructure_(L) when is_list(L) ->
-    [ destructure_(Q) || Q <- L];
+destructure_arg(L) when is_list(L) ->
+    [destructure_arg(L1) || L1 <- L];
 
-destructure_(N) when is_integer(N) ->
+destructure_arg(N) when is_integer(N) ->
     N;
-destructure_(N) when is_float(N) ->
+destructure_arg(N) when is_float(N) ->
     N;
-destructure_({time, T, U}) ->
+destructure_arg({time, T, U}) ->
     Us = atom_to_binary(U, utf8),
     <<(integer_to_binary(T))/binary, " ", Us/binary>>;
-destructure_(#{op := time, args := [T, U]}) ->
+destructure_arg(#{op := time, args := [T, U]}) ->
     Us = atom_to_binary(U, utf8),
     <<(integer_to_binary(T))/binary, " ", Us/binary>>;
-destructure_(now) ->
+destructure_arg(now) ->
     now.
 
 -spec timeframe(map()) -> timeframe().
 timeframe(#{ op := 'last', args := [Q] }) ->
-    #{ m => abs, duration => destructure_(Q) };
+    #{ m => abs, duration => destructure_arg(Q) };
+
 timeframe(#{ op := 'between', args := [#{ op := 'ago', args := [T] }, B] }) ->
-    #{ m => rel, beginning => destructure_(T), ending => destructure_(B) };
+    #{ m => rel, beginning => destructure_arg(T),
+       ending => destructure_arg(B) };
+
 timeframe(#{ op := 'between', args := [A, B] }) ->
-    #{ m => abs, beginning => destructure_(A), ending => destructure_(B) };
+    #{ m => abs, beginning => destructure_arg(A),
+       ending => destructure_arg(B) };
+
 timeframe(#{ op := 'after', args := [A, B] }) ->
-    #{ m => abs, beginning => destructure_(A), duration => destructure_(B) };
+    #{ m => abs, beginning => destructure_arg(A),
+       duration => destructure_arg(B) };
+
 timeframe(#{ op := 'before', args := [#{ op := 'ago', args := [T] }, B] }) ->
-    #{ m => rel, beginning => destructure_(T), duration => destructure_(B) };
+    #{ m => rel, beginning => destructure_arg(T),
+       duration => destructure_arg(B) };
+
 timeframe(#{ op := 'before', args := [A, B] }) ->
-    #{ m => abs, ending => destructure_(A), duration => destructure_(B) };
+    #{ m => abs, ending => destructure_arg(A),
+       duration => destructure_arg(B) };
+
 timeframe(#{ op := 'ago', args := [T] }) ->
-    #{ m => rel, beginning => destructure_(T) }.
+    #{ m => rel, beginning => destructure_arg(T) }.
 
 -spec deconstruct_tag({tag, binary(), binary()}) -> list(binary()).
 deconstruct_tag({tag, <<>>, K}) ->
@@ -175,25 +220,3 @@ destructure_name({dvar, {<<>>, K}}) ->
     <<"$'", K/binary, "'">>;
 destructure_name({dvar, {Ns, K}}) ->
     <<"$'", Ns/binary, "':'", K/binary, "'">>.
-
--spec extract_selector(alias() | fn() | selector()) -> selector().
-extract_selector(S = #{ metric := _Metric }) ->
-    S;
-extract_selector(#{ name := _Name, args := [H | _T] }) ->
-    extract_selector(H);
-extract_selector(#{ subject := S }) ->
-    extract_selector(S).
-
--spec extract_fn(alias() | fn() | selector()) -> selector() | undefined.
-extract_fn(F = #{ name := _Name, args := _Args }) ->
-    F;
-extract_fn(#{ subject := S }) ->
-    extract_fn(S);
-extract_fn(#{ metric := _Metric }) ->
-    undefined.
-
--spec extract_alias(alias | term()) -> alias() | undefined.
-extract_alias(A = #{subject := _Subject}) ->
-    A;
-extract_alias(_M) ->
-    undefined.

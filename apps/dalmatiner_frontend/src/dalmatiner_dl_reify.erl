@@ -71,42 +71,20 @@ handle_json(Payload, Req, State) ->
             {ok, ReqN, State}
     end.
 
--spec reify(query() | part() | selector() | fn() | any()) -> binary().
+-spec reify(query() | list(part()) | term()) -> binary().
 reify(D = #{ parts := Parts }) ->
-    <<"SELECT ", (reify(Parts))/binary, " ", (reify_timeframe(D))/binary>>;
-
-reify(Ls) when is_list(Ls) ->
-    Qs = [reify(Q) || Q <- Ls],
+    <<"SELECT ", (reify(Parts))/binary, " ",
+      (reify_timeframe(D))/binary>>;
+reify(Parts) when is_list(Parts) ->
+    Qs = [reify(P) || P <- Parts],
     combine(Qs);
-
-%% -spec reify(query()) -> binary().
-reify(#{ alias := #{ label := Label, subject := Subject }}) ->
-    <<(reify(Subject))/binary, " AS ", Label/binary>>;
-reify(#{ fn := F }) when F =/= undefined ->
-    reify(F);
+reify(#{ alias := #{ label := Label }} = P) ->
+    P1 = maps:remove(alias, P),
+    <<(reify(P1))/binary, " AS ", Label/binary>>;
+reify(#{ fn := F } = P) ->
+    reify(F, P);
 reify(#{ selector := S }) ->
-    reify(S);
-
-%% -spec reify(fn()) -> binary().
-reify(#{ name := Name, args := Args }) ->
-    Qs = reify(Args),
-    <<Name/binary, "(", Qs/binary, ")">>;
-
-%% -spec reify(selector()) -> binary().
-reify(#{ bucket := B, metric := M, condition := Cond }) ->
-    Where = reify_where(Cond),
-    <<(reify_metric(M))/binary, " BUCKET '", B/binary, "'", Where/binary>>;
-
-reify(#{ bucket := B, metric := M }) ->
-    <<(reify_metric(M))/binary, " BUCKET '", B/binary, "'">>;
-
-reify(#{ collection := C, metric := M, condition := Cond }) ->
-    Where = reify_where(Cond),
-    <<(reify_metric(M))/binary, " FROM '", C/binary, "' WHERE ", Where/binary>>;
-
-reify(#{ collection := C, metric := M }) ->
-    <<(reify_metric(M))/binary, " FROM '", C/binary, "'">>;
-
+    reify_selector(S);
 reify(N) when is_integer(N) ->
     <<(integer_to_binary(N))/binary>>;
 reify(N) when is_float(N) ->
@@ -115,6 +93,34 @@ reify(now) ->
     <<"NOW">>;
 reify(N) ->
     N.
+
+%% The part `P' is used as a reference lookup for selector, timeshift etc.
+-spec reify(fn() | list(map()), part()) -> binary().
+reify(L, P) when is_list(L) ->
+    lists:foldl(fun (L1, BAcc) ->
+                    B = reify(L1, P),
+                    combine([BAcc, B])
+                end, <<>>, L);
+reify(#{ name := Name, args := [selector | Args] }, #{ selector := S } = P) ->
+    Qs = [reify_selector(S), reify(Args, P)],
+    <<Name/binary, "(", (combine(Qs))/binary, ")">>;
+reify(#{ name := Name, args := Args }, P) ->
+    Qs = reify(Args, P),
+    <<Name/binary, "(", Qs/binary, ")">>;
+reify(M, _P) ->
+    reify(M).
+
+-spec reify_selector(selector()) -> binary().
+reify_selector(#{ bucket := B, metric := M, condition := Cond }) ->
+    Where = reify_where(Cond),
+    <<(reify_metric(M))/binary, " BUCKET '", B/binary, "'", Where/binary>>;
+reify_selector(#{ bucket := B, metric := M }) ->
+    <<(reify_metric(M))/binary, " BUCKET '", B/binary, "'">>;
+reify_selector(#{ collection := C, metric := M, condition := Cond }) ->
+    Where = reify_where(Cond),
+    <<(reify_metric(M))/binary, " FROM '", C/binary, "' WHERE ", Where/binary>>;
+reify_selector(#{ collection := C, metric := M }) ->
+    <<(reify_metric(M))/binary, " FROM '", C/binary, "'">>.
 
 -spec reify_metric(['*' | binary()]) -> binary().
 reify_metric([M = <<"ALL">>]) ->
@@ -177,5 +183,7 @@ combine([], Acc) ->
     Acc;
 combine([E | R], <<>>) ->
     combine(R, E);
+combine([<<>> | R], Acc) ->
+    combine(R, Acc);
 combine([E | R], Acc) ->
     combine(R, <<Acc/binary, ", ", E/binary>>).
