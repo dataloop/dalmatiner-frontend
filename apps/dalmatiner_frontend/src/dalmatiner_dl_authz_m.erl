@@ -155,10 +155,15 @@ check_query_all_parts_access([Part | Rest], OrgOidMap) ->
         Access -> Access
     end.
 
-%% Go though each named subject or timeshift
-check_query_part_access(#{op := Op,
+%% Go though each named subject
+check_query_part_access(#{op := named,
+                          args := [_Name, _Meta, Nested]},
+                        OrgOidMap) ->
+    check_query_part_access(Nested, OrgOidMap);
+%% ,or timeshift
+check_query_part_access(#{op := timeshft,
                           args := [_Name, Nested]},
-                        OrgOidMap) when Op =:= named orelse Op =:= timeshift ->
+                        OrgOidMap) ->
     check_query_part_access(Nested, OrgOidMap);
 %% Check all function call arguments
 check_query_part_access(#{op := fcall,
