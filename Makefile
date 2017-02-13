@@ -3,7 +3,7 @@ REBAR = $(shell pwd)/rebar3
 
 .PHONY: deps rel stagedevrel package version all tree
 
-all: version_header compile
+all: version_header compile fifo.mk
 
 include fifo.mk
 
@@ -19,7 +19,7 @@ clean: deb-clean
 	make -C rel/deb clean
 	-rm -r apps/*/ebin
 
-rel: update
+rel:
 	$(REBAR) as prod compile
 	$(REBAR) as prod release
 
@@ -29,6 +29,6 @@ package: rel
 deb-clean: 
 	make -C rel/deb clean
 
-deb-prepare: update
+deb-prepare:
 	$(REBAR) as deb release
 	make -C rel/deb prepare
