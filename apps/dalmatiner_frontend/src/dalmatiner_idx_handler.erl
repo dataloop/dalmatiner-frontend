@@ -31,10 +31,41 @@ handle(Req, State) ->
                         cowboy_req:reply(400, [], Error, ReqR),
                     {ok, ReqR1, State};
                 {T, {ok, Start, R2}} ->
-                    D = encode_reply(Start, T, R2),
-                    {ContentType, ReqR1} = content_type(ReqR),
-                    send(ContentType, D, ReqR1, State)
+                    send_versioned_reply(Start, T, R2, State, ReqR)
             end
+    end.
+
+send_versioned_reply(Start, T, R2, State, Req) ->
+    {D2, Req3} = case cowboy_req:header(<<"version">>, Req, <<"1">>) of
+                     {<<"1">>, Req2} ->
+                         D = encode_v1_reply(Start, T,R2),
+                         {D, Req2};
+                     {<<"2">>, Req2} ->
+                         D = encode_reply(Start, T,R2),
+                         {D, Req2}
+                 end,
+    {ContentType, Req4} = content_type(Req3),
+    send(ContentType, D2, Req4, State).
+
+encode_v1_reply(Start, T, R2) ->
+    R3 = [#{n => Name,
+            r => Resolution,
+            v => mmath_bin:to_list(Data),
+            metadata => Mdata}
+          || #{name := Name,
+               data := Data,
+               type := metrics,
+               metadata := Mdata,
+               resolution := Resolution} <- R2],
+    D = #{s => Start,
+          t => T,
+          d => R3},
+    case R2 of
+        [#{type := graph,
+           value := Graph} | _] ->
+            maps:put(graph, Graph, D);
+        _ ->
+            D
     end.
 
 encode_reply(Start, T, R2) ->

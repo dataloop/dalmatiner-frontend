@@ -136,14 +136,16 @@ function render_graph(graph) {
 
 function q() {
   var query = $("#query").val();
-  var base = "?"
+  var base = "?";
   $("#events").text("").append($("<hr/>"))
   if ($("#debug").is(':checked')) {
     base = "?graph&q=";
   } else {
     base = "?q=";
   }
-  msgpack.download(base + query, {header: {accept:"application/x-msgpack"}}, function(res) {
+  msgpack.download(base + query,
+                   {header: {accept:"application/x-msgpack", version: "2"}},
+                   function(res) {
     $("#permalink").attr("href", "/?query=" + encodeURIComponent(query));
     $("#permalink").show();
     $("#time").text((res.query_time / 1000) + "ms");
