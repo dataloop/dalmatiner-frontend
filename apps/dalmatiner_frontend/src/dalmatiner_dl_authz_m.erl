@@ -161,8 +161,8 @@ check_query_part_access(#{op := named,
                         OrgOidMap) ->
     check_query_part_access(Nested, OrgOidMap);
 %% ,or timeshift
-check_query_part_access(#{op := timeshft,
-                          args := [_Name, Nested]},
+check_query_part_access(#{op := timeshift,
+                          args := [_Time, Nested]},
                         OrgOidMap) ->
     check_query_part_access(Nested, OrgOidMap);
 %% Check all function call arguments
