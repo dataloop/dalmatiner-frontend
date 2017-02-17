@@ -38,10 +38,10 @@ handle(Req, State) ->
 send_versioned_reply(Start, T, R2, State, Req) ->
     {D2, Req3} = case cowboy_req:header(<<"version">>, Req, <<"1">>) of
                      {<<"1">>, Req2} ->
-                         D = encode_v1_reply(Start, T,R2),
+                         D = encode_v1_reply(Start, T, R2),
                          {D, Req2};
                      {<<"2">>, Req2} ->
-                         D = encode_reply(Start, T,R2),
+                         D = encode_reply(Start, T, R2),
                          {D, Req2}
                  end,
     {ContentType, Req4} = content_type(Req3),
