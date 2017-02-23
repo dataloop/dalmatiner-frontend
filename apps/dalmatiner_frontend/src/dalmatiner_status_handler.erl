@@ -26,7 +26,7 @@ terminate(_Reason, _Req, _State) ->
     ok.
 
 check_ddb_status() ->
-    {ok, {Host, Port}} = application:get_env(dqe, backend),
+    {Host, Port} = endpoint(),
     {ok, Socket} = gen_tcp:connect(Host, Port,
                                    [{active, false},
                                     {send_timeout, 5000}]),
@@ -36,6 +36,18 @@ check_ddb_status() ->
              end,
     ok = gen_tcp:close(Socket),
     Status.
+
+endpoint() ->
+    case application:get_env(ddb_connection, backend) of
+        {ok, {Host, Port}} ->
+            {Host, Port};
+        _ ->
+            {ok, Host} = application:get_env(ddb_connection,
+                                             backend_host),
+            {ok, Port} = application:get_env(ddb_connection,
+                                             backend_port),
+            {Host, Port}
+    end.
 
 send(json, Status, D, Req, State) ->
     {ok, Req1} =
