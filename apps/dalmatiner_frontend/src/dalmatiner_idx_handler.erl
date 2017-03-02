@@ -27,9 +27,10 @@ handle(Req, State) ->
                 {_, {error, E}} ->
                     Error = list_to_binary(dqe:error_string({error, E})),
                     lager:warning("Error in query [~s]: ~p", [Q, E]),
-                    {ok, ReqR1} =
-                        cowboy_req:reply(400, [], Error, ReqR),
-                    {ok, ReqR1, State};
+                    StatusCode = error_code(E),
+                    {ok, Req2} =
+                        cowboy_req:reply(StatusCode, [], Error, Req1),
+                    {ok, Req2, State};
                 {T, {ok, Start, R2}} ->
                     send_versioned_reply(Start, T, R2, State, ReqR)
             end
@@ -119,6 +120,11 @@ content_type_([{{<<"application">>, <<"x-msgpack">>, _}, _, _} | _]) ->
     msgpack;
 content_type_([_ | R]) ->
     content_type_(R).
+
+error_code(no_results) ->
+    404;
+error_code(_) ->
+    400.
 
 send(json, D, Req, State) ->
     {ok, Req1} =
