@@ -28,11 +28,11 @@ handle(Req, State) ->
                     Error = list_to_binary(dqe:error_string({error, E})),
                     lager:warning("Error in query [~s]: ~p", [Q, E]),
                     StatusCode = error_code(E),
-                    {ok, Req2} =
-                        cowboy_req:reply(StatusCode,
-                                        [{<<"content-type">>, <<"text/plain">>}],
-                                         Error, Req1),
-                    {ok, Req2, State};
+                    {ok, ReqR1} =
+                        cowboy_req:reply(
+                          StatusCode, [{<<"content-type">>, <<"text/plain">>}],
+                          Error, ReqR),
+                    {ok, ReqR1, State};
                 {T, {ok, Start, R2}} ->
                     send_versioned_reply(Start, T, R2, State, ReqR)
             end
