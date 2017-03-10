@@ -20,7 +20,7 @@
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.2.4">>},1},
  {<<"dqe_idx_pg">>,
   {git,"https://github.com/dataloop/dqe_idx_pg.git",
-       {ref,"83f56f016e256dc107497278ee3e7d834ded05fe"}},
+       {ref,"e8b8269ee6e9f104edf3523c226388479c7e9eb8"}},
   0},
  {<<"ejwt">>,{pkg,<<"ejwt">>,<<"0.1.0">>},0},
  {<<"eper">>,{pkg,<<"eper">>,<<"0.94.0">>},0},
