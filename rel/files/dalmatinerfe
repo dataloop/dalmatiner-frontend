@@ -12,8 +12,9 @@ PIPE_DIR=/tmp/dalmatinerfe/
 RUNNER_USER="${RUNNER_USER:-{{run_user}}}"
 
 # Make sure this script is running as the appropriate user
-if [ ! -z "$RUNNER_USER" ] && [ `whoami` != "$RUNNER_USER" ]; then
-    exec sudo -H -u $RUNNER_USER $0 $@
+if [ ! -z "${RUNNER_USER}" ] && [ `whoami` != "${RUNNER_USER}" ]; then
+    # Make sure that the environment of the current user is preserved with -E
+    exec sudo -E -H -u ${RUNNER_USER} "${0}" "${@}"
 fi
 
 # Make sure CWD is set to runner base dir
