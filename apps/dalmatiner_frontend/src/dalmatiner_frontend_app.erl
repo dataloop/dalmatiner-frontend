@@ -137,7 +137,7 @@ start(_StartType, _StartArgs) ->
                                    cowboy_handler]},
                                  {max_keepalive, 5},
                                  %% Keep max url length in pair with nginx
-                                 {max_request_line_length, 8192},
+                                 {max_request_line_length, 32768},
                                  {timeout, 50000}]),
     dalmatiner_frontend_sup:start_link().
 
