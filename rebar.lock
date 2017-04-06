@@ -20,7 +20,7 @@
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.2.4">>},1},
  {<<"dqe_idx_pg">>,
   {git,"https://github.com/dalmatinerdb/dqe_idx_pg.git",
-       {ref,"8817bbeaecf17e763e53c7a487188414a7be0a12"}},
+       {ref,"4aabaae9f7f695f46571bb6e26487a71b5506693"}},
   0},
  {<<"ejwt">>,{pkg,<<"ejwt">>,<<"0.1.0">>},0},
  {<<"eper">>,{pkg,<<"eper">>,<<"0.94.0">>},0},
