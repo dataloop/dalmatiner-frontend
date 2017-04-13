@@ -18,12 +18,27 @@ handle(Req, State) ->
     handle(Method, Req1, State).
 
 -dialyzer({no_opaque, handle/3}).
-handle(<<"POST">>, Req, State) ->
-    case cowboy_req:has_body(Req) of
-        true ->
+handle(<<"POST">>, Req0, State) ->
+    {ok, CType, Req} = cowboy_req:parse_header(<<"content-type">>, Req0,
+                                               {<<"text">>, <<"plain">>, []}),
+    ReqHasBody = cowboy_req:has_body(Req),
+    case CType of
+        {<<"text">>, <<"plain">>, _Charset}
+          when ReqHasBody =:= true ->
             {ok, Query, Req1} = read_req_body(Req),
             run_query(Query, Req1, State);
-        false ->
+        {<<"application">>, <<"x-www-form-urlencoded">>, []}
+          when ReqHasBody =:= true ->
+            {ok, PostVals, Req1} = cowboy_req:body_qs(Req),
+            Query = proplists:get_value(<<"q">>, PostVals),
+            run_query(Query, Req1, State);
+        _Other
+          when ReqHasBody =:= true ->
+            Headers = [{<<"content-type">>, <<"text/plain">>}],
+            {ok, ErrReq} = cowboy_req:reply(415, Headers,
+                                <<"Content type not supported">>, Req),
+            {ok, ErrReq, State};
+        _Else ->
             {ok, Req1} = cowboy_req:reply(400, [], <<"Missing body.">>, Req),
             {ok, Req1, State}
     end;
@@ -63,8 +78,9 @@ run_query(Q, Req, State) ->
             lager:warning("Error in query [~s]: ~p", [Q, E]),
             StatusCode = error_code(E),
             {ok, ErrReq} = cowboy_req:reply(StatusCode,
-                                    [{<<"content-type">>, <<"text/plain">>}],
-                                    Error, ReqR),
+                                            [{<<"content-type">>,
+                                              <<"text/plain">>}],
+                                            Error, ReqR),
             {ok, ErrReq, State};
         {T, {ok, Start, R2}} ->
             send_versioned_reply(Start, T, R2, State, ReqR)
