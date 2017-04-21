@@ -27,7 +27,7 @@ handle(<<"POST">>, Req0, State) ->
           when ReqHasBody =:= true ->
             {ok, Query, Req1} = read_req_body(Req),
             run_query(Query, Req1, State);
-        {<<"application">>, <<"x-www-form-urlencoded">>, []}
+        {<<"application">>, <<"x-www-form-urlencoded">>, _Charset}
           when ReqHasBody =:= true ->
             {ok, PostVals, Req1} = cowboy_req:body_qs(Req),
             Query = proplists:get_value(<<"q">>, PostVals),
