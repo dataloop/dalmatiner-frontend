@@ -112,7 +112,7 @@ encode_v1_reply(Start, T, R2) ->
                type := metrics,
                metadata := Mdata,
                resolution := Resolution} <- R2],
-    D = #{s => Start,
+    D = #{s => Start / 1000,
           t => T,
           d => R3},
     case R2 of
