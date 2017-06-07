@@ -13,7 +13,7 @@ prepare:
 	mkdir -p stage/var/log/dfe
 	mkdir -p stage/DEBIAN
 	cp -r ../../_build/deb/rel/dalmatinerfe/bin stage/usr/lib/dfe/
-	cp -r ../../_build/deb/rel/dalmatinerfe/etc stage/data/dalmatinerfe/etc/
+	cp -r ../../_build/deb/rel/dalmatinerfe/etc stage/etc/
 	cp -r ../../_build/deb/rel/dalmatinerfe/erts-* stage/usr/lib/dfe/
 	cp -r ../../_build/deb/rel/dalmatinerfe/lib stage/usr/lib/dfe/
 	cp -r ../../_build/deb/rel/dalmatinerfe/releases stage/usr/lib/dfe/
