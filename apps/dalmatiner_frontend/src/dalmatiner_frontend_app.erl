@@ -63,6 +63,8 @@ start(_StartType, _StartArgs) ->
                          %% Dataloop API extension
                          {"/status", dalmatiner_status_handler, []},
                          {"/inspect", dalmatiner_inspect_handler, []},
+                         {"/collections/:collection/metrics_lookup",
+                          dalmatiner_metric_lookup_h, []},
                          {"/dl", dalmatiner_idx_handler, []},
                          %% List all functions
                          {"/dl/functions", dalmatiner_function_h, []},
