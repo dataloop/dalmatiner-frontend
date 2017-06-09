@@ -12,44 +12,43 @@ init(_Transport, Req, []) ->
 handle(Req, State) ->
     {ContentType, Req1} = dalmatiner_idx_handler:content_type(Req),
     {Collection, Req2} = cowboy_req:binding(collection, Req1),
-    {Tags, Req3} = cowboy_req:qs_val(<<"tags">>, Req2),
-    %% TODO: cleanup debug statements
-    lager:info("Recived metrics lookup query: ~p", [Tags]),
-    Query = metrics_query_by_tags(Collection, [<<"all">>]),
+    {QVals, Req3} = cowboy_req:qs_vals(Req2),
+    Dimensions = metrics_criteria(QVals, []),
+    lager:debug("Looking up metrics with dimensions: ~p", [Dimensions]),
+    Query = metrics_query(Collection, Dimensions),
     lookup_metrics(ContentType, Query, Req3, State).
 
 terminate(_Reason, _Req, _State) ->
     ok.
 
+
 %%
 %% Internals
 %%
 
-metrics_query_by_tags(Collection, Tags) ->
-     TagHStore = {[{<<"label:", T/binary>>, <<>>} || T <- Tags]},
-     metrics_query(Collection, {"dimensions @> $1", [TagHStore]}).
+metrics_criteria([], Acc) ->
+    {[week_dimension() | Acc]};
+metrics_criteria([{<<"tag">>, Tag} | Rest], Acc) ->
+    Dim = {<<"label:", Tag/binary>>, <<>>},
+    metrics_criteria(Rest, [Dim | Acc]);
+metrics_criteria([{<<"source">>, Source} | Rest], Acc) ->
+    Dim = {<<"dl:source">>, Source},
+    metrics_criteria(Rest, [Dim | Acc]).
 
-%% lookup_metrics_by_source(ContentType, Collection, Source, Req, State) ->
-%%     Prefix = decode_prefix(Prefix64),
-%%     Depth = decode_depth(DepthBin),
-%%     {ok, Ms} = dqe_idx:metrics(Collection, Prefix, Depth),
-%%     Ms1 = [Prefix ++ M || M <- Ms],
-%%     list_metrics(ContentType, Ms1, Req, State).
+metrics_query(Collection, Dimensions) ->
+    Expression = "SELECT DISTINCT slice(dimensions, '{ddb:part_2, ddb:part_3, "
+        "ddb:part_4, ddb:part_5, ddb:part_6, ddb:part_7, ddb:part_8, "
+        "ddb:part_9, ddb:part_10, ddb:part_11, ddb:part_12, "
+        "ddb:part_13, ddb:part_14, ddb:part_15, ddb:part_16, "
+        "ddb:part_17, ddb:part_18, ddb:part_19, ddb:part_20, "
+        "ddb:part_21, ddb:part_22}')"
+        " FROM metrics"
+        " WHERE collection = $1"
+        " AND dimensions @> $2",
+    {Expression, [Collection, Dimensions]}.
 
-metrics_query(Collection, Condition) ->
-    {CondExpression, CondValues} = Condition,
-    Pos = length(CondValues),
-    Expression = ["SELECT DISTINCT slice(dimensions, '{ddb:part_2, ddb:part_3, "
-                  "ddb:part_4, ddb:part_5, ddb:part_6, ddb:part_7, ddb:part_8, "
-                  "ddb:part_9, ddb:part_10, ddb:part_11, ddb:part_12, "
-                  "ddb:part_13, ddb:part_14, ddb:part_15, ddb:part_16, "
-                  "ddb:part_17, ddb:part_18, ddb:part_19, ddb:part_20, "
-                  "ddb:part_21, ddb:part_22}')"
-                  " FROM metrics"
-                  " WHERE collection = $",
-                  integer_to_binary(Pos + 1),
-                  " AND ", CondExpression],
-    {Expression, CondValues ++ [Collection]}.
+%% TODO: when doing one level at a time, we will need to add flags saying
+%% that it has children and whether it is selectable.
 
 lookup_metrics(ContentType, {Expression, Values}, Req, State) ->
     %% I put massive timeout here, because it can take ages for big accounts,
@@ -61,7 +60,8 @@ lookup_metrics(ContentType, {Expression, Values}, Req, State) ->
         Error ->
             lager:error("Error in metric lookup query [~s]: ~p", 
                         [Expression, Error]),
-            cowboy_req:reply(500, Req)
+            {ok, Req1} = cowboy_req:reply(500, Req),
+            {ok, Req1, State}
     end.
 
 %% It will encode metric in a format that is compatible with old dataloop api,
@@ -72,3 +72,6 @@ encode_metric({Dimensions}) ->
     Metric = dproto:metric_from_list(MetricParts),
     #{id => base64:encode(Metric),
       name => dproto:metric_to_string(Metric, <<".">>)}.
+
+week_dimension() ->
+    {<<"dl:week_127">>, <<>>}.
