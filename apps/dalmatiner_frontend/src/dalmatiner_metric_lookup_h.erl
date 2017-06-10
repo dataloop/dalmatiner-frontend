@@ -5,6 +5,10 @@
 
 -ignore_xref([init/3, handle/2, terminate/3]).
 
+-define(WEEK_LENGTH, 604800).                   % A week in seconds
+-define(WEEK_START, 1420070400).                % 2015-01-01 in seconds since
+                                                % epoch. It aligns with weeks.
+
 init(_Transport, Req, []) ->
     {ok, Req, undefined}.
 
@@ -74,4 +78,9 @@ encode_metric({Dimensions}) ->
       name => dproto:metric_to_string(Metric, <<".">>)}.
 
 week_dimension() ->
-    {<<"dl:week_127">>, <<>>}.
+    %% W add extra magin of 30 minutes to give indexer some extra time to
+    %% build up indexes just after rolling to new week
+    Time = erlang:system_time(second) - 1800,
+    Week = trunc((Time - ?WEEK_START) / ?WEEK_LENGTH),
+    WeekBin = integer_to_binary(Week),
+    {<<"dl:week_", WeekBin/binary>>, <<"">>}.
