@@ -5,7 +5,7 @@
        {ref,"14308ab927cfa69324742c3de720578094e0bb19"}},
   1},
  {<<"cf">>,{pkg,<<"cf">>,<<"0.2.2">>},1},
- {<<"cowboy">>,{pkg,<<"cowboy">>,<<"1.0.4">>},0},
+ {<<"cowboy">>,{pkg,<<"cowboy">>,<<"1.1.2">>},0},
  {<<"cowlib">>,{pkg,<<"cowlib">>,<<"1.0.2">>},1},
  {<<"ddb_client">>,{pkg,<<"ddb_client">>,<<"0.5.5">>},2},
  {<<"ddb_connection">>,{pkg,<<"ddb_connection">>,<<"0.4.2">>},1},
@@ -68,7 +68,7 @@
 {pkg_hash,[
  {<<"base16">>, <<"283644E2B21BD5915ACB7178BED7851FB07C6E5749B8FAD68A53C501092176D9">>},
  {<<"cf">>, <<"7F2913FFF90ABCABD0F489896CFEB0B0674F6C8DF6C10B17A83175448029896C">>},
- {<<"cowboy">>, <<"A324A8DF9F2316C833A470D918AAF73AE894278B8AA6226CE7A9BF699388F878">>},
+ {<<"cowboy">>, <<"61AC29EA970389A88ECA5A65601460162D370A70018AFE6F949A29DCA91F3BB0">>},
  {<<"cowlib">>, <<"9D769A1D062C9C3AC753096F868CA121E2730B9A377DE23DEC0F7E08B1DF84EE">>},
  {<<"ddb_client">>, <<"86DDDCE3B379DD3B0B425299DCE86CA49AB00DE8B59DE876EF3F1FA780F39F11">>},
  {<<"ddb_connection">>, <<"D59222829EE5DFF89690AAD2E26D422C30BB14F1AA5A61A7921BF02D58735DB8">>},
