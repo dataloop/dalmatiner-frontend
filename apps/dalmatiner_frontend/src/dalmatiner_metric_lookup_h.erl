@@ -67,16 +67,17 @@ lookup_metrics(ContentType, {Expression, Values}, Req, State) ->
             lager:error("PG metric lookup query timeout [~s]", 
                         [Expression]),
             {ok, Req1} = cowboy_req:reply(504,
-                                          #{<<"content-type">> =>
-                                                <<"text/plain">>},
-                                          "Query timeout", Req),
+                                          [{<<"content-type">>,
+                                            <<"text/plain">>}],
+                                          "Query too wide! Could not get "
+                                          "results in reasonable time", Req),
             {ok, Req1, State};
         Error ->
             lager:error("Error in metric lookup query [~s]: ~p", 
                         [Expression, Error]),
             {ok, Req1} = cowboy_req:reply(500,
-                                          #{<<"content-type">> =>
-                                                <<"text/plain">>},
+                                          [{<<"content-type">>,
+                                            <<"text/plain">>}],
                                           "Internal server error", Req),
             {ok, Req1, State}
     end.
