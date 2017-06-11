@@ -94,7 +94,7 @@ encode_metric({Dimensions}) ->
 week_dimension() ->
     %% W add extra magin of 30 minutes to give indexer some extra time to
     %% build up indexes just after rolling to new week
-    Time = erlang:system_time(second) - 1800,
+    Time = erlang:system_time(seconds) - 1800,
     Week = trunc((Time - ?WEEK_START) / ?WEEK_LENGTH),
     WeekBin = integer_to_binary(Week),
     {<<"dl:week_", WeekBin/binary>>, <<"">>}.
