@@ -5,6 +5,8 @@
 
 -ignore_xref([init/3, handle/2, terminate/3]).
 
+-define(PG_TIMEOUT, 30000).                     % Maximum time in ms to wait
+                                                % for postgres.
 -define(WEEK_LENGTH, 604800).                   % A week in seconds
 -define(WEEK_START, 1420070400).                % 2015-01-01 in seconds since
                                                 % epoch. It aligns with weeks.
@@ -57,14 +59,25 @@ metrics_query(Collection, Dimensions) ->
 lookup_metrics(ContentType, {Expression, Values}, Req, State) ->
     %% I put massive timeout here, because it can take ages for big accounts,
     %% across all tags
-    case pgapp:equery(Expression, Values, 600000) of
+    case pgapp:equery(Expression, Values, ?PG_TIMEOUT) of
         {ok, _Cols, Rows} ->
             Data = [encode_metric(M) || {M} <- Rows],
             dalmatiner_idx_handler:send(ContentType, Data, Req, State);
+        {error, timeout} ->
+            lager:error("PG metric lookup query timeout [~s]", 
+                        [Expression]),
+            {ok, Req1} = cowboy_req:reply(504,
+                                          #{<<"content-type">> =>
+                                                <<"text/plain">>},
+                                          "Query timeout", Req),
+            {ok, Req1, State};
         Error ->
             lager:error("Error in metric lookup query [~s]: ~p", 
                         [Expression, Error]),
-            {ok, Req1} = cowboy_req:reply(500, Req),
+            {ok, Req1} = cowboy_req:reply(500,
+                                          #{<<"content-type">> =>
+                                                <<"text/plain">>},
+                                          "Internal server error", Req),
             {ok, Req1, State}
     end.
 
