@@ -7,13 +7,14 @@ COMPONENT = dfe
 prepare:
 	mkdir -p stage/data/dalmatinerfe
 	mkdir -p stage/etc/systemd/system
+	mkdir -p stage/etc/dfe
 	mkdir -p stage/usr/bin
 	mkdir -p stage/usr/lib/dfe
 	mkdir -p stage/var/lib/dfe
 	mkdir -p stage/var/log/dfe
 	mkdir -p stage/DEBIAN
 	cp -r ../../_build/deb/rel/dalmatinerfe/bin stage/usr/lib/dfe/
-	cp -r ../../_build/deb/rel/dalmatinerfe/etc stage/etc/
+	cp -r ../../_build/deb/rel/dalmatinerfe/etc/* stage/etc/dfe/
 	cp -r ../../_build/deb/rel/dalmatinerfe/erts-* stage/usr/lib/dfe/
 	cp -r ../../_build/deb/rel/dalmatinerfe/lib stage/usr/lib/dfe/
 	cp -r ../../_build/deb/rel/dalmatinerfe/releases stage/usr/lib/dfe/
