@@ -21,7 +21,7 @@
  {<<"dqe_idx_ddb">>,{pkg,<<"dqe_idx_ddb">>,<<"0.4.0">>},1},
  {<<"dqe_idx_pg">>,
   {git,"https://github.com/outlyerapp/dqe_idx_pg.git",
-       {ref,"4cfb10ab257dc6ea43858a656b9eb25c4c3762fc"}},
+       {ref,"15af8d75e83e47d5a8a7de9bb5d5f6319ccbec1e"}},
   0},
  {<<"dynamic_compile">>,{pkg,<<"dynamic_compile">>,<<"1.0.0">>},1},
  {<<"ejwt">>,{pkg,<<"ejwt">>,<<"0.1.0">>},0},
