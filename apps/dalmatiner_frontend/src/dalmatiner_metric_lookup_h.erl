@@ -22,7 +22,8 @@ handle(Req, State) ->
     Dimensions = metrics_criteria(QVals, []),
     lager:debug("Looking up metrics with dimensions: ~p", [Dimensions]),
     Query = metrics_query(Collection, Dimensions),
-    lookup_metrics(ContentType, Query, Req3, State).
+    Pool = collection_pool(Collection),
+    lookup_metrics(ContentType, Pool, Query, Req3, State).
 
 terminate(_Reason, _Req, _State) ->
     ok.
@@ -53,13 +54,21 @@ metrics_query(Collection, Dimensions) ->
         " AND dimensions @> $2",
     {Expression, [Collection, Dimensions]}.
 
+collection_pool(Collection) ->
+    case ets:lookup(dqe_idx_pg_poolmap, Collection) of
+        [{_C, Pool}| _] ->
+            Pool;
+        [] ->
+            default
+    end.
+
 %% TODO: when doing one level at a time, we will need to add flags saying
 %% that it has children and whether it is selectable.
 
-lookup_metrics(ContentType, {Expression, Values}, Req, State) ->
+lookup_metrics(ContentType, Pool, {Expression, Values}, Req, State) ->
     %% I put massive timeout here, because it can take ages for big accounts,
     %% across all tags
-    case pgapp:equery(Expression, Values, ?PG_TIMEOUT) of
+    case pgapp:equery(Pool, Expression, Values, ?PG_TIMEOUT) of
         {ok, _Cols, Rows} ->
             Data = [encode_metric(M) || {M} <- Rows],
             dalmatiner_idx_handler:send(ContentType, Data, Req, State);
