@@ -3,6 +3,10 @@
 -behaviour(gen_server).
 -behaviour(poolboy_worker).
 
+-dialyzer([{nowarn_function, [find_user_orgs/2]}, no_return]).
+-dialyzer([{nowarn_function, [find/4]}, no_return]).
+-dialyzer(no_unused).
+
 %% API
 -export([start_link/1]).
 -export([user_orgs/1, token/1, user_org_access/2, agent_access/2]).

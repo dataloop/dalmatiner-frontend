@@ -73,7 +73,7 @@ lookup_metrics(ContentType, Pool, {Expression, Values}, Req, State) ->
             Data = [encode_metric(M) || {M} <- Rows],
             dalmatiner_idx_handler:send(ContentType, Data, Req, State);
         {error, timeout} ->
-            lager:error("PG metric lookup query timeout [~s]", 
+            lager:error("PG metric lookup query timeout [~s]",
                         [Expression]),
             {ok, Req1} = cowboy_req:reply(504,
                                           [{<<"content-type">>,
@@ -82,7 +82,7 @@ lookup_metrics(ContentType, Pool, {Expression, Values}, Req, State) ->
                                           "results in reasonable time", Req),
             {ok, Req1, State};
         Error ->
-            lager:error("Error in metric lookup query [~s]: ~p", 
+            lager:error("Error in metric lookup query [~s]: ~p",
                         [Expression, Error]),
             {ok, Req1} = cowboy_req:reply(500,
                                           [{<<"content-type">>,
@@ -93,8 +93,8 @@ lookup_metrics(ContentType, Pool, {Expression, Values}, Req, State) ->
 
 %% It will encode metric in a format that is compatible with old dataloop api,
 %% so we can just forward it in the app straight to console.
-encode_metric({Dimensions}) ->
-    PosPart = [{Pos, Part} || {<<"ddb:part_", Pos/binary>>, Part} <- Dimensions],
+encode_metric({Dims}) ->
+    PosPart = [{Pos, Part} || {<<"ddb:part_", Pos/binary>>, Part} <- Dims],
     MetricParts = [Part || {_Pos, Part} <- lists:sort(PosPart)],
     Metric = dproto:metric_from_list(MetricParts),
     #{id => base64:encode(Metric),
